@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickDesk - Help Desk Ticketing System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles */
+        .sidebar {
+            transition: all 0.3s;
+        }
+        .ticket-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .status-open {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .status-in-progress {
+            background-color: #bfdbfe;
+            color: #1e40af;
+        }
+        .status-resolved {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .status-closed {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        /* Animation for notification badge */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .notification-badge {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen overflow-hidden">
+        <div class="sidebar bg-indigo-700 text-white w-64 space-y-6 py-7 px-2 fixed inset-y-0 left-0 transform -translate-x-64 md:translate-x-0 transition duration-200 ease-in-out">
+            <div class="flex items-center space-x-2 px-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span class="text-xl font-bold">QuickDesk</span>
+            </div>
+            <nav>
+                <div class="space-y-2">
+                    <a href="#" id="dashboard-link" class="nav-link block py-2.5 px-4 rounded transition duration-200 bg-indigo-800 text-white">
+                        <i class="fas fa-home mr-3"></i>Dashboard
+                    </a>
+                    <a href="#" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-800">
+                        <i class="fas fa-ticket-alt mr-3"></i>My Tickets
+                    </a>
+                    <a href="#" id="sidebar-create-ticket" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-800">
+                        <i class="fas fa-plus-circle mr-3"></i>Create Ticket
+                    </a>
+                    <a href="#" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-800">
+                        <i class="fas fa-users mr-3"></i>Team Tickets <span class="notification-badge inline-block text-xs bg-red-500 rounded-full px-2 ml-2">3</span>
+                    </a>
+                    <div class="pt-4 border-t border-indigo-800">
+                        <a href="#" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-800">
+                            <i class="fas fa-cog mr-3"></i>Settings
+                        </a>
+                        <a href="#" id="admin-panel-link" class="nav-link block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-800">
+                            <i class="fas fa-user-shield mr-3"></i>Admin Panel
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <div class="flex-1 flex flex-col overflow-hidden md:ml-64">
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between h-16 px-4">
+                    <button class="md:hidden text-gray-500 focus:outline-none">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <div class="flex-1 max-w-md mx-4">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                            <input class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Search tickets..." type="search">
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span class="sr-only">View notifications</span>
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+                        </button>
+                        
+                        <div class="ml-3 relative">
+                            <div>
+                                <button class="max-w-xs flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="user-menu">
+                                    <span class="sr-only">Open user menu</span>
+                                    <img class="h-8 w-8 rounded-full" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/8255cff8-a0f7-40b4-975b-399845f02040.png" alt="Profile picture of John Doe">
+                                    <span class="ml-2 hidden md:block">John Doe</span>
+                                    <i class="fas fa-chevron-down ml-1 text-gray-400"></i>
+                                </button>
+                            </div>
+                            <div class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 hidden" role="menu" aria-orientation="vertical">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Your Profile</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Settings</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Sign out</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 bg-gray-100">
+                <div id="dashboard-view" class="view">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="md:flex md:items-center md:justify-between mb-6">
+                            <div class="flex-1 min-w-0">
+                                <h1 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                                    Dashboard
+                                </h1>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Welcome back, John! You have <span class="font-medium text-indigo-600">2 open tickets</span> that need attention.
+                                </p>
+                            </div>
+                            <div class="mt-4 flex md:mt-0 md:ml-4">
+                                </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+                            <div class="bg-white border rounded-lg shadow-sm overflow-hidden">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 bg-indigo-100 rounded-md p-3">
+                                            <i class="fas fa-ticket-alt text-indigo-600 text-xl"></i>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 truncate">Open Tickets</dt>
+                                                <dd>
+                                                    <div class="text-lg font-medium text-gray-900">12</div>
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border rounded-lg shadow-sm overflow-hidden">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                                            <i class="fas fa-spinner text-blue-600 text-xl"></i>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 truncate">In Progress</dt>
+                                                <dd>
+                                                    <div class="text-lg font-medium text-gray-900">5</div>
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border rounded-lg shadow-sm overflow-hidden">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 bg-green-100 rounded-md p-3">
+                                            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 truncate">Resolved</dt>
+                                                <dd>
+                                                    <div class="text-lg font-medium text-gray-900">27</div>
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border rounded-lg shadow-sm overflow-hidden">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 bg-gray-100 rounded-md p-3">
+                                            <i class="fas fa-archive text-gray-600 text-xl"></i>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 truncate">Closed</dt>
+                                                <dd>
+                                                    <div class="text-lg font-medium text-gray-900">42</div>
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white shadow rounded-lg overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <h2 class="text-lg font-medium text-gray-900">Recent Tickets</h2>
+                                    <div class="flex">
+                                        <div class="relative inline-block text-left">
+                                            <div>
+                                                <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="sort-menu">
+                                                    Sort by
+                                                    <i class="fas fa-chevron-down ml-2"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="ml-3 relative inline-block text-left">
+                                            <div>
+                                                <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="filter-menu">
+                                                    Filter
+                                                    <i class="fas fa-filter ml-2"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="divide-y divide-gray-200">
+                                <div class="ticket-card transition duration-150 ease-in-out hover:bg-gray-50">
+                                    <div class="px-6 py-4">
+                                        <div class="flex items-start">
+                                            <div class="flex-shrink-0 pt-1">
+                                                <div class="status-open px-3 py-1 text-xs font-medium rounded-full">
+                                                    Open
+                                                </div>
+                                            </div>
+                                            <div class="ml-4 flex-1">
+                                                <div class="flex items-center justify-between">
+                                                    <h3 class="text-lg font-medium text-gray-900">
+                                                        Cannot login to my account
+                                                    </h3>
+                                                    <div class="flex text-sm text-gray-500">
+                                                        <span class="text-indigo-600 font-medium mx-2"><i class="fas fa-user-circle mr-1"></i>Assigned to you</span>
+                                                        <span>#QDK-4872</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-1 text-sm text-gray-600">
+                                                    I've tried resetting my password twice but still can't access my account...
+                                                </div>
+                                                <div class="mt-2 flex justify-between">
+                                                    <div class="flex space-x-4 text-sm text-gray-500">
+                                                        <span><i class="fas fa-user mr-1"></i>John Smith</span>
+                                                        <span><i class="far fa-calendar-alt mr-1"></i>Opened 2 days ago</span>
+                                                        <span><i class="far fa-clock mr-1"></i>Updated 3 hours ago</span>
+                                                        <span><i class="fas fa-tag mr-1"></i>Authentication</span>
+                                                    </div>
+                                                    <div class="flex">
+                                                        <button class="p-1 rounded-full text-gray-400 hover:text-gray-500">
+                                                            <span class="sr-only">Upvote</span>
+                                                            <i class="fas fa-arrow-up"></i> 3
+                                                        </button>
+                                                        <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 ml-2">
+                                                            <span class="sr-only">Downvote</span>
+                                                            <i class="fas fa-arrow-down"></i> 0
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ticket-card transition duration-150 ease-in-out hover:bg-gray-50">
+                                    <div class="px-6 py-4">
+                                        <div class="flex items-start">
+                                            <div class="flex-shrink-0 pt-1">
+                                                <div class="status-in-progress px-3 py-1 text-xs font-medium rounded-full">
+                                                    In Progress
+                                                </div>
+                                            </div>
+                                            <div class="ml-4 flex-1">
+                                                <div class="flex items-center justify-between">
+                                                    <h3 class="text-lg font-medium text-gray-900">
+                                                        Dashboard widgets not loading
+                                                    </h3>
+                                                    <div class="flex text-sm text-gray-500">
+                                                        <span class="text-indigo-600 font-medium mx-2"><i class="fas fa-user-tie mr-1"></i>Priority</span>
+                                                        <span>#QDK-4865</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-1 text-sm text-gray-600">
+                                                    Half of the dashboard widgets fail to load after the latest update...
+                                                </div>
+                                                <div class="mt-2 flex justify-between">
+                                                    <div class="flex space-x-4 text-sm text-gray-500">
+                                                        <span><i class="fas fa-user mr-1"></i>Sarah Johnson</span>
+                                                        <span><i class="far fa-calendar-alt mr-1"></i>Opened 1 day ago</span>
+                                                        <span><i class="far fa-clock mr-1"></i>Updated 1 hour ago</span>
+                                                        <span><i class="fas fa-tag mr-1"></i>UI Issues</span>
+                                                    </div>
+                                                    <div class="flex">
+                                                        <button class="p-1 rounded-full text-gray-400 hover:text-gray-500">
+                                                            <span class="sr-only">Upvote</span>
+                                                            <i class="fas fa-arrow-up"></i> 7
+                                                        </button>
+                                                        <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 ml-2">
+                                                            <span class="sr-only">Downvote</span>
+                                                            <i class="fas fa-arrow-down"></i> 1
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ticket-card transition duration-150 ease-in-out hover:bg-gray-50">
+                                    <div class="px-6 py-4">
+                                        <div class="flex items-start">
+                                            <div class="flex-shrink-0 pt-1">
+                                                <div class="status-resolved px-3 py-1 text-xs font-medium rounded-full">
+                                                    Resolved
+                                                </div>
+                                            </div>
+                                            <div class="ml-4 flex-1">
+                                                <div class="flex items-center justify-between">
+                                                    <h3 class="text-lg font-medium text-gray-900">
+                                                        API timeout errors
+                                                    </h3>
+                                                    <div class="flex text-sm text-gray-500">
+                                                        <span>#QDK-4831</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-1 text-sm text-gray-600">
+                                                    Getting 504 errors when calling the customer API endpoint...
+                                                </div>
+                                                <div class="mt-2 flex justify-between">
+                                                    <div class="flex space-x-4 text-sm text-gray-500">
+                                                        <span><i class="fas fa-user mr-1"></i>Michael Brown</span>
+                                                        <span><i class="far fa-calendar-alt mr-1"></i>Opened 4 days ago</span>
+                                                        <span><i class="far fa-clock mr-1"></i>Updated 2 days ago</span>
+                                                        <span><i class="fas fa-tag mr-1"></i>API Integrations</span>
+                                                    </div>
+                                                    <div class="flex">
+                                                        <button class="p-1 rounded-full text-gray-400 hover:text-gray-500">
+                                                            <span class="sr-only">Upvote</span>
+                                                            <i class="fas fa-arrow-up"></i> 5
+                                                        </button>
+                                                        <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 ml-2">
+                                                            <span class="sr-only">Downvote</span>
+                                                            <i class="fas fa-arrow-down"></i> 0
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="px-6 py-4 border-t border-gray-200">
+                                <nav class="flex items-center justify-between">
+                                    <div class="flex-1 flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm text-gray-700">
+                                                Showing <span class="font-medium">1</span> to <span class="font-medium">3</span> of <span class="font-medium">12</span> tickets
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                                    <span class="sr-only">Previous</span>
+                                                    <i class="fas fa-chevron-left"></i>
+                                                </a>
+                                                <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-indigo-600 hover:bg-gray-50">
+                                                    1
+                                                </a>
+                                                <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                    2
+                                                </a>
+                                                <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                    3
+                                                </a>
+                                                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                                    <span class="sr-only">Next</span>
+                                                    <i class="fas fa-chevron-right"></i>
+                                                </a>
+                                            </nav>
+                                        </div>
+                                    </div>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-view" class="view hidden">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="mb-6">
+                            <h1 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                                Admin Panel
+                            </h1>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Manage users, roles, and system settings.
+                            </p>
+                        </div>
+                        <div class="bg-white shadow rounded-lg overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h2 class="text-lg font-medium text-gray-900">User Management</h2>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Edit</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">John Doe</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Admin</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Sarah Johnson</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Support Agent</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true" id="new-ticket-modal">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+                <div>
+                    <div class="mt-3 text-center sm:mt-0 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            Create New Ticket
+                        </h3>
+                        <form class="mt-5" id="new-ticket-form">
+                            <div class="space-y-6">
+                                <div>
+                                    <label for="subject" class="block text-sm font-medium text-gray-700">Subject</label>
+                                    <div class="mt-1">
+                                        <input type="text" name="subject" id="subject" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Briefly describe the issue">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                                        <div class="mt-1">
+                                            <select id="category" name="category" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                            <option>Select a category</option>
+                                            <option>Authentication</option>
+                                            <option>Billing</option>
+                                            <option>Technical Issues</option>
+                                            <option>Feature Request</option>
+                                            <option>General Support</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                                        <div class="mt-1">
+                                            <select id="priority" name="priority" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                                <option>Low</option>
+                                                <option selected>Medium</option>
+                                                <option>High</option>
+                                                <option>Critical</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="related-to" class="block text-sm font-medium text-gray-700">Related To</label>
+                                        <div class="mt-1">
+                                            <select id="related-to" name="related-to" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                                <option>Not related</option>
+                                                <option>User Management</option>
+                                                <option>Billing System</option>
+                                                <option>API Services</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="due-date" class="block text-sm font-medium text-gray-700">Due Date</label>
+                                        <div class="mt-1">
+                                            <input type="date" id="due-date" name="due-date" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                                    <div class="mt-1">
+                                        <textarea id="description" name="description" rows="4" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Please provide detailed information about your issue"></textarea>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Attachment</label>
+                                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                        <div class="space-y-1 text-center">
+                                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                            <div class="flex text-sm text-gray-600">
+                                                <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                                    <span>Upload a file</span>
+                                                    <input id="file-upload" name="file-upload" type="file" class="sr-only">
+                                                </label>
+                                                <p class="pl-1">or drag and drop</p>
+                                            </div>
+                                            <p class="text-xs text-gray-500">
+                                                PNG, JPG, PDF up to 10MB
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                    <button type="submit" form="new-ticket-form" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm">
+                        Create Ticket
+                    </button>
+                    <button type="button" id="cancel-ticket-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Mobile menu toggle ---
+            const mobileMenuButton = document.querySelector('.md\\:hidden .fa-bars');
+            const sidebar = document.querySelector('.sidebar');
+            if (mobileMenuButton) {
+                mobileMenuButton.closest('button').addEventListener('click', function() {
+                    sidebar.classList.toggle('-translate-x-64');
+                    sidebar.classList.toggle('translate-x-0');
+                });
+            }
+
+            // --- User dropdown menu ---
+            const userButton = document.getElementById('user-menu');
+            const userMenu = userButton.nextElementSibling;
+            userButton.addEventListener('click', function() {
+                userMenu.classList.toggle('hidden');
+            });
+
+            // --- New Ticket Modal Functionality ---
+            const modal = document.getElementById('new-ticket-modal');
+            const openModalBtn = document.getElementById('sidebar-create-ticket');
+            const closeModalBtn = document.getElementById('cancel-ticket-btn');
+            const ticketForm = document.getElementById('new-ticket-form');
+
+            // Function to open the modal
+            const openModal = () => {
+                modal.classList.remove('hidden');
+            };
+
+            // Function to close the modal
+            const closeModal = () => {
+                modal.classList.add('hidden');
+            };
+
+            // Event listener to open the modal
+            openModalBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openModal();
+            });
+            
+            // Event listener for the "Cancel" button to close the modal
+            closeModalBtn.addEventListener('click', closeModal);
+
+            // Event listener for the form submission ("Create Ticket" button)
+            ticketForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent the default form submission
+                
+                const formData = {
+                    subject: document.getElementById('subject').value,
+                    category: document.getElementById('category').value,
+                    priority: document.getElementById('priority').value,
+                    relatedTo: document.getElementById('related-to').value,
+                    dueDate: document.getElementById('due-date').value,
+                    description: document.getElementById('description').value
+                };
+                
+                console.log('New ticket submitted:', formData);
+                alert(`Ticket created successfully!\n\nSubject: ${formData.subject}`);
+
+                closeModal(); // Close the modal after submission
+                ticketForm.reset(); // Reset the form fields
+            });
+
+
+            // --- View switching for Dashboard and Admin Panel ---
+            const dashboardLink = document.getElementById('dashboard-link');
+            const adminPanelLink = document.getElementById('admin-panel-link');
+            const dashboardView = document.getElementById('dashboard-view');
+            const adminView = document.getElementById('admin-view');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const setActiveLink = (activeLink) => {
+                navLinks.forEach(link => {
+                    link.classList.remove('bg-indigo-800');
+                    link.classList.add('hover:bg-indigo-800');
+                });
+                activeLink.classList.add('bg-indigo-800');
+                activeLink.classList.remove('hover:bg-indigo-800');
+            };
+
+            dashboardLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                dashboardView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                setActiveLink(dashboardLink);
+            });
+
+            adminPanelLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                adminView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+                setActiveLink(adminPanelLink);
+            });
+
+            // --- Other Interactive Elements ---
+
+            // Upvote/Downvote functionality (Example)
+            const voteButtons = document.querySelectorAll('[class*="fa-arrow"]');
+            voteButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const countElement = this.nextSibling;
+                    if (countElement && countElement.nodeType === Node.TEXT_NODE) {
+                        let count = parseInt(countElement.textContent.trim());
+                        countElement.textContent = ' ' + (count + 1);
+                    }
+                });
+            });
+            
+            // Ticket click functionality (Example)
+            const ticketCards = document.querySelectorAll('.ticket-card');
+            ticketCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // In a real app, this would navigate to the ticket detail view
+                    console.log('Ticket clicked:', this.querySelector('h3').textContent.trim());
+                });
+            });
+            
+            // Dashboard statistics animation (Example)
+            const statsCards = document.querySelectorAll('.stats-card');
+            statsCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.transition = 'transform 0.2s';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = '';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
